@@ -7,7 +7,37 @@ import { Language, MedicalSummary, PatientDetails } from '@/types';
  */
 
 /**
- * Structured patient summary data returned by Gemma AI
+ * Shared schema for GenAI structured intake output.
+ */
+export interface StructuredPatientIntake {
+  language: string;
+  chiefComplaint: string;
+  symptoms: string[];
+  symptomsDetails: {
+    name: string;
+    duration: string;
+    severity: string;
+  }[];
+  duration: string;
+  severity: string;
+  existingConditions: string[];
+  currentMedicines: string[];
+  knownAllergies: string[];
+  relevantContext: string[];
+  missingInformation: string[];
+  normalizedComplaint: string;
+}
+
+export interface GenAISummaryResult {
+  success: true;
+  modelUsed: string;
+  modelBrand: 'Gemma' | 'Gemini' | 'Unknown';
+  isFallback: boolean;
+  summary: StructuredPatientIntake;
+}
+
+/**
+ * Legacy Gemma summary type used by older fallback helpers.
  */
 export interface PatientSummaryResult {
   chiefComplaint: string;

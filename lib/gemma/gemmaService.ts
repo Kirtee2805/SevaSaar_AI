@@ -1,125 +1,160 @@
 import { GoogleGenAI } from '@google/genai';
 import { buildGemmaPrompt } from './prompt';
-import { PatientSummaryResult } from './types';
+import { GenAISummaryResult, StructuredPatientIntake } from './types';
 
-/**
- * ==============================================================================
- * GEMMA / GEMINI AI SERVICE (lib/gemma/gemmaService.ts)
- * ==============================================================================
- *
- * Integration for Google AI Studio models using official @google/genai SDK.
- * Reads API key safely from environment variables (.env.local).
- */
-
-function getApiKey(): string {
-  return process.env.GOOGLE_API_KEY || process.env.GEMMA_API_KEY || '';
-}
+const GEMMA_CONFIG = {
+  apiKey: process.env.GOOGLE_API_KEY || process.env.GEMMA_API_KEY || '',
+  primaryModel: process.env.GEMMA_MODEL_NAME || '',
+  fallbackModels: [
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-2.5-flash-lite',
+    'gemma-4-31b-it'
+  ]
+};
 
 function getGenAIClient(): GoogleGenAI | null {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    console.error('[GemmaService] Error: GOOGLE_API_KEY is missing in environment variables (.env.local).');
+  if (!GEMMA_CONFIG.apiKey) {
+    console.error('[GemmaService] GOOGLE_API_KEY or GEMMA_API_KEY is required.');
     return null;
   }
-  return new GoogleGenAI({ apiKey });
+
+  return new GoogleGenAI({ apiKey: GEMMA_CONFIG.apiKey });
 }
 
-/**
- * Generates a structured patient summary from raw multilingual complaint text.
- *
- * @param patientDescription - Patient complaint text in Gujarati, Hindi, English, or Mixed language.
- * @returns Structured JSON summary object or null if API/parsing fails.
- */
-export async function generatePatientSummary(
-  patientDescription: string
-): Promise<PatientSummaryResult | null> {
-  try {
-    if (!patientDescription || typeof patientDescription !== 'string' || patientDescription.trim().length < 3) {
-      console.warn('[GemmaService] Invalid or empty patient description provided.');
-      return null;
-    }
+function getModelBrand(modelName: string): 'Gemma' | 'Gemini' | 'Unknown' {
+  const normalized = modelName.toLowerCase();
+  if (normalized.startsWith('gemma')) return 'Gemma';
+  if (normalized.startsWith('gemini')) return 'Gemini';
+  return 'Unknown';
+}
 
-    const ai = getGenAIClient();
-    if (!ai) {
-      return null;
-    }
+function normalizeString(value: unknown): string {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : 'Not provided';
+}
 
-    const prompt = buildGemmaPrompt(patientDescription.trim());
-    
-    // Candidate models list to maximize reliability across API versions & quota tiers
-    const configuredModel = process.env.GEMMA_MODEL_NAME || 'gemini-2.0-flash';
-    const candidateModels = Array.from(new Set([
-      configuredModel,
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-lite',
-      'gemma-4-31b-it',
-      'gemini-2.5-flash-lite'
-    ]));
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(String)
+    .map(item => item.trim())
+    .filter(item => item.length > 0);
+}
 
-    let responseText = '';
-    let lastError: unknown = null;
-
-    for (const modelName of candidateModels) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: prompt,
-          config: {
-            temperature: 0.2,
-            responseMimeType: 'application/json',
-          },
-        });
-
-        if (response.text && response.text.trim().length > 0) {
-          responseText = response.text;
-          console.log(`[GemmaService] Successfully generated summary using model '${modelName}'`);
-          break;
-        }
-      } catch (err) {
-        lastError = err;
-        console.warn(`[GemmaService] Model '${modelName}' attempt failed:`, (err as Error)?.message || err);
-      }
-    }
-
-    if (!responseText) {
-      console.warn('[GemmaService] All candidate models failed or returned empty output. Using safety fallback generator.');
-      return null;
-    }
-
-    // Parse JSON safely
-    let parsed: unknown;
-    try {
-      const cleanedText = responseText
-        .replace(/^```(json)?\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .trim();
-      parsed = JSON.parse(cleanedText);
-    } catch (parseError) {
-      console.error('[GemmaService] JSON parsing failed on model response:', parseError, 'Raw text:', responseText);
-      return null;
-    }
-
-    if (typeof parsed !== 'object' || parsed === null) {
-      console.error('[GemmaService] Parsed Gemma output is not a valid JSON object.');
-      return null;
-    }
-
-    const data = parsed as Record<string, unknown>;
-
-    const result: PatientSummaryResult = {
-      chiefComplaint: typeof data.chiefComplaint === 'string' ? data.chiefComplaint : 'Unknown',
-      symptoms: Array.isArray(data.symptoms) ? data.symptoms.map(String) : [],
-      duration: typeof data.duration === 'string' ? data.duration : 'Unknown',
-      medicines: Array.isArray(data.medicines) ? data.medicines.map(String) : [],
-      conditions: Array.isArray(data.conditions) ? data.conditions.map(String) : [],
-      allergies: Array.isArray(data.allergies) ? data.allergies.map(String) : [],
-      missing: Array.isArray(data.missing) ? data.missing.map(String) : [],
+function normalizeSymptomDetails(value: unknown): StructuredPatientIntake['symptomsDetails'] {
+  if (!Array.isArray(value)) return [];
+  return value.map(item => {
+    const detail = item as Record<string, unknown>;
+    return {
+      name: normalizeString(detail?.name),
+      duration: normalizeString(detail?.duration),
+      severity: normalizeString(detail?.severity)
     };
+  });
+}
 
-    return result;
+function parseModelResponse(rawText: string): unknown {
+  const cleaned = rawText
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
 
+  return JSON.parse(cleaned);
+}
+
+function validateStructuredIntake(data: unknown): StructuredPatientIntake {
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('GenAI output is not a valid object');
+  }
+
+  const intake = data as Record<string, unknown>;
+
+  return {
+    language: normalizeString(intake.language),
+    chiefComplaint: normalizeString(intake.chiefComplaint),
+    symptoms: normalizeStringArray(intake.symptoms),
+    symptomsDetails: normalizeSymptomDetails(intake.symptomsDetails),
+    duration: normalizeString(intake.duration),
+    severity: normalizeString(intake.severity),
+    existingConditions: normalizeStringArray(intake.existingConditions),
+    currentMedicines: normalizeStringArray(intake.currentMedicines),
+    knownAllergies: normalizeStringArray(intake.knownAllergies),
+    relevantContext: normalizeStringArray(intake.relevantContext),
+    missingInformation: normalizeStringArray(intake.missingInformation),
+    normalizedComplaint: normalizeString(intake.normalizedComplaint)
+  };
+}
+
+function buildModelCandidates(): string[] {
+  const candidates: string[] = [];
+  if (GEMMA_CONFIG.primaryModel) {
+    candidates.push(GEMMA_CONFIG.primaryModel);
+  }
+  for (const model of GEMMA_CONFIG.fallbackModels) {
+    if (!candidates.includes(model)) {
+      candidates.push(model);
+    }
+  }
+  return candidates;
+}
+
+async function callModel(modelName: string, prompt: string): Promise<{ text: string; modelName: string } | null> {
+  const ai = getGenAIClient();
+  if (!ai) return null;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: prompt,
+      config: {
+        temperature: 0.0,
+        responseMimeType: 'application/json'
+      }
+    });
+
+    if (!response.text || !response.text.trim()) {
+      console.warn(`[GemmaService] ${modelName} returned empty response`);
+      return null;
+    }
+
+    return { text: response.text, modelName };
   } catch (error) {
-    console.error('[GemmaService] Unexpected error during generatePatientSummary execution:', error);
+    console.warn(`[GemmaService] ${modelName} failed:`, (error as Error)?.message || error);
     return null;
   }
+}
+
+export async function generatePatientSummary(
+  patientDescription: string,
+  patientLanguage: string
+): Promise<GenAISummaryResult | null> {
+  if (!patientDescription || typeof patientDescription !== 'string' || patientDescription.trim().length < 3) {
+    console.warn('[GemmaService] Invalid patient description');
+    return null;
+  }
+
+  const prompt = buildGemmaPrompt(patientDescription.trim(), patientLanguage);
+  const candidates = buildModelCandidates();
+
+  for (const modelName of candidates) {
+    const response = await callModel(modelName, prompt);
+    if (!response) continue;
+
+    try {
+      const parsed = parseModelResponse(response.text);
+      const summary = validateStructuredIntake(parsed);
+      return {
+        success: true,
+        modelUsed: response.modelName,
+        modelBrand: getModelBrand(response.modelName),
+        isFallback: response.modelName !== GEMMA_CONFIG.primaryModel,
+        summary
+      };
+    } catch (error) {
+      console.warn(`[GemmaService] Failed to parse or validate response from ${response.modelName}:`, error);
+    }
+  }
+
+  console.warn('[GemmaService] No model produced valid structured output');
+  return null;
 }

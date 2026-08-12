@@ -4,18 +4,6 @@ import { generatePatientSummary } from '@/lib/gemma/gemmaService';
 import { generateMockSummaryFromText } from '@/lib/mockData';
 import { checkEmergencyRules } from '@/lib/emergencyRules';
 
-/**
- * ==============================================================================
- * API ENDPOINT: POST /api/generate-summary
- * ==============================================================================
- *
- * 1. Receives patient complaint text.
- * 2. Calls Gemma via `generatePatientSummary(rawComplaint)` to get structured JSON.
- * 3. Passes the structured JSON (symptoms) & raw text into `checkEmergencyRules()`.
- * 4. Merges Gemma outputs with emergency rule outputs.
- * 5. Returns merged structured JSON without modifying frontend.
- */
-
 const GenerateSummarySchema = z.object({
   language: z.enum(['en', 'hi', 'gu', 'mixed']).optional().default('en'),
   patientDetails: z.object({
@@ -26,6 +14,8 @@ const GenerateSummarySchema = z.object({
     location: z.string().optional(),
   }).optional(),
   rawComplaint: z.string().min(1, 'Complaint description is required'),
+  speechTranscript: z.string().optional(),
+  transcriptionLanguage: z.enum(['en', 'hi', 'gu', 'mixed']).optional()
 });
 
 export async function POST(req: NextRequest) {
@@ -33,42 +23,48 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validatedData = GenerateSummarySchema.parse(body);
 
-    const { rawComplaint, language } = validatedData;
+    const { rawComplaint, language, speechTranscript } = validatedData;
+    const inputLanguage = language || 'en';
 
-    // 1. Call Gemma service for structured JSON extraction
-    let gemmaJSON = await generatePatientSummary(rawComplaint);
+    const genAIResult = await generatePatientSummary(rawComplaint, inputLanguage);
+    let generatedSummary = genAIResult?.summary;
+    let modelUsed = genAIResult?.modelUsed || 'Fallback generator';
+    let modelBrand = genAIResult?.modelBrand || 'Unknown';
+    let isFallback = genAIResult?.isFallback ?? true;
 
-    let isMockFallback = false;
-    if (!gemmaJSON) {
+    if (!generatedSummary) {
       console.warn('[API /api/generate-summary] generatePatientSummary returned null. Using fallback generator.');
-      const fallbackResult = generateMockSummaryFromText(rawComplaint, language || 'en');
-      gemmaJSON = {
+      const fallbackResult = generateMockSummaryFromText(rawComplaint, inputLanguage);
+      generatedSummary = {
+        language: inputLanguage,
         chiefComplaint: fallbackResult.chiefComplaint,
         symptoms: fallbackResult.symptoms,
+        symptomsDetails: [],
         duration: fallbackResult.duration,
-        conditions: fallbackResult.conditions,
-        medicines: fallbackResult.medicines,
-        allergies: fallbackResult.allergies,
-        missing: fallbackResult.missing,
+        severity: 'Not provided',
+        existingConditions: fallbackResult.conditions,
+        currentMedicines: fallbackResult.medicines,
+        knownAllergies: fallbackResult.allergies,
+        relevantContext: [],
+        missingInformation: fallbackResult.missing,
+        normalizedComplaint: rawComplaint
       };
-      isMockFallback = true;
+      modelUsed = 'SevaSaar Fallback Generator';
+      modelBrand = 'Unknown';
+      isFallback = true;
     }
 
-    // 2. Pass Gemma extracted symptoms and raw complaint into emergencyRules()
-    const emergencyEval = checkEmergencyRules(rawComplaint, gemmaJSON.symptoms);
+    const emergencyEval = checkEmergencyRules(rawComplaint, generatedSummary.symptoms, speechTranscript || '');
 
-    // 3. Merge Gemma outputs + emergency rule outputs
     const mergedOutput = {
-      chiefComplaint: gemmaJSON.chiefComplaint,
-      symptoms: gemmaJSON.symptoms,
-      duration: gemmaJSON.duration,
-      medicines: gemmaJSON.medicines,
-      conditions: gemmaJSON.conditions,
-      allergies: gemmaJSON.allergies,
-      missingInformation: gemmaJSON.missing,
-      missing: gemmaJSON.missing, // Maintains 100% compatibility with frontend MedicalSummary type
-      emergency: emergencyEval.emergency,
-      emergencyReason: emergencyEval.emergency ? emergencyEval.reason : null
+      ...generatedSummary,
+      modelUsed,
+      modelBrand,
+      isFallback,
+      emergency: emergencyEval.isEmergency,
+      emergencyReason: emergencyEval.message,
+      matchedRules: emergencyEval.matchedRules,
+      emergencyPriority: emergencyEval.priority
     };
 
     return NextResponse.json({
@@ -76,13 +72,12 @@ export async function POST(req: NextRequest) {
       data: mergedOutput,
       emergencyRuleCheck: emergencyEval,
       meta: {
-        processedBy: isMockFallback
-          ? 'SevaSaar Fallback Generator (Gemma API parse failed)'
-          : 'Google Gemma AI Service (gemmaService.ts)',
+        processedBy: modelUsed,
+        modelBrand,
+        isFallback,
         disclaimer: 'SevaSaar AI does not diagnose diseases or recommend treatments.'
       }
     });
-
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

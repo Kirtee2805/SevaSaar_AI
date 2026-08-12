@@ -1,40 +1,26 @@
 /**
- * ==============================================================================
+ * ============================================================================
  * DETERMINISTIC EMERGENCY SAFETY RULE ENGINE (lib/emergencyRules.ts)
- * ==============================================================================
+ * ============================================================================
  *
- * Evaluates predefined deterministic safety rules ONLY.
- * Does NOT use AI for emergency detection.
- * Fully decoupled from Gemma.
- *
- * Rules Evaluated:
- * 1. Chest Pain AND Breathing Difficulty
- * 2. Heavy Bleeding
- * 3. Loss of Consciousness
- * 4. Stroke Symptoms
+ * Evaluates predefined deterministic emergency rules only.
+ * Does NOT depend on the GenAI model for safety decisions.
  */
 
 export interface EmergencyRulesResult {
-  emergency: boolean;
-  reason?: string;
-  isEmergency?: boolean;
-  rulesTriggered?: string[];
+  isEmergency: boolean;
+  matchedRules: string[];
+  priority: 'IMMEDIATE' | 'URGENT' | 'ROUTINE';
+  message: string;
 }
 
-/**
- * Evaluates deterministic emergency rules against patient symptoms and description.
- *
- * @param rawText - Raw patient complaint text or description.
- * @param symptoms - Array of symptoms extracted from intake text.
- * @returns Object indicating emergency status boolean and reason string.
- */
 export function checkEmergencyRules(
   rawText: string = '',
-  symptoms: string[] = []
+  symptoms: string[] = [],
+  speechTranscript: string = ''
 ): EmergencyRulesResult {
-  const inputToEvaluate = `${rawText} ${symptoms.join(' ')}`.toLowerCase();
+  const textToEvaluate = [rawText, speechTranscript, symptoms.join(' ')].filter(Boolean).join(' ').toLowerCase();
 
-  // Keyword banks across Gujarati, Hindi, English, and Hinglish/Gujlish
   const chestPainKeywords = [
     'chest pain', 'chest pressure', 'chest tightness', 'heart pain',
     'छाती में दर्द', 'छाती में जकड़न', 'છાતીમાં દુખાવો', 'છાતીમાં દબાણ',
@@ -43,7 +29,7 @@ export function checkEmergencyRules(
 
   const breathingKeywords = [
     'breathing difficulty', 'shortness of breath', 'difficulty breathing', 'breathless',
-    'सांस लेने में तकलीफ', 'सांस फूलना', 'શ્વાસ લેવામાં તકલીફ', 'શ્વાસ ચડવો',
+    'सांस लेने में तकलीफ', 'सांस फूलना', 'શ્વાસ મેળવવામાં તકલીફ', 'શ્વાસ ચડવો',
     'saans me taklif', 'shwas'
   ];
 
@@ -65,40 +51,52 @@ export function checkEmergencyRules(
     'લકવો', 'મોં વાંકુ', 'બોલવામાં તકલીફ', 'અચાનક નબળાઈ'
   ];
 
-  // Rule 1: Chest Pain AND Breathing Difficulty (both required)
-  const hasChestPain = chestPainKeywords.some(kw => inputToEvaluate.includes(kw));
-  const hasBreathingDifficulty = breathingKeywords.some(kw => inputToEvaluate.includes(kw));
-  const isRule1 = hasChestPain && hasBreathingDifficulty;
+  const traumaKeywords = [
+    'head trauma', 'head injury', 'severe head injury', 'skull fracture', 'concussion',
+    'सिर में चोट', 'सिर पर चोट', 'માથામાં ચોટ', 'માથાનો ઈજા',
+    'head injury', 'brain injury'
+  ];
 
-  // Rule 2: Heavy Bleeding
-  const isRule2 = heavyBleedingKeywords.some(kw => inputToEvaluate.includes(kw));
+  const seizureKeywords = [
+    'seizure', 'convulsion', 'fits', 'shaking uncontrollably', 'tonic-clonic',
+    'दौरा', 'दौरे', 'झटके', 'કંપન', 'દોળતા'
+  ];
 
-  // Rule 3: Loss of Consciousness
-  const isRule3 = consciousnessKeywords.some(kw => inputToEvaluate.includes(kw));
-
-  // Rule 4: Stroke Symptoms
-  const isRule4 = strokeKeywords.some(kw => inputToEvaluate.includes(kw));
-
-  const isEmergency = isRule1 || isRule2 || isRule3 || isRule4;
-
-  const rulesTriggered: string[] = [];
-  if (isRule1) rulesTriggered.push('Chest Pain AND Breathing Difficulty');
-  if (isRule2) rulesTriggered.push('Heavy Bleeding');
-  if (isRule3) rulesTriggered.push('Loss of Consciousness');
-  if (isRule4) rulesTriggered.push('Stroke Symptoms');
-
-  if (isEmergency) {
-    return {
-      emergency: true,
-      reason: 'Immediate Professional Medical Attention Recommended',
-      isEmergency: true,
-      rulesTriggered
-    };
+  const matchedRules: string[] = [];
+  const hasChestPain = chestPainKeywords.some(kw => textToEvaluate.includes(kw));
+  const hasBreathingDifficulty = breathingKeywords.some(kw => textToEvaluate.includes(kw));
+  if (hasChestPain && hasBreathingDifficulty) {
+    matchedRules.push('Chest pain with breathing difficulty');
   }
 
+  if (heavyBleedingKeywords.some(kw => textToEvaluate.includes(kw))) {
+    matchedRules.push('Heavy or uncontrolled bleeding');
+  }
+
+  if (consciousnessKeywords.some(kw => textToEvaluate.includes(kw))) {
+    matchedRules.push('Loss of consciousness / fainting');
+  }
+
+  if (strokeKeywords.some(kw => textToEvaluate.includes(kw))) {
+    matchedRules.push('Stroke warning signs');
+  }
+
+  if (traumaKeywords.some(kw => textToEvaluate.includes(kw))) {
+    matchedRules.push('Severe head trauma');
+  }
+
+  if (seizureKeywords.some(kw => textToEvaluate.includes(kw))) {
+    matchedRules.push('Convulsions / seizures');
+  }
+
+  const isEmergency = matchedRules.length > 0;
+
   return {
-    emergency: false,
-    isEmergency: false,
-    rulesTriggered: []
+    isEmergency,
+    matchedRules,
+    priority: isEmergency ? 'IMMEDIATE' : 'ROUTINE',
+    message: isEmergency
+      ? '⚠️ Immediate Professional Medical Attention Recommended'
+      : 'No emergency rule matched. Continue with standard intake review.'
   };
 }

@@ -4,6 +4,15 @@ export type Role = 'patient' | 'receptionist' | 'doctor';
 
 export type PatientStatus = 'Waiting' | 'Completed' | 'Emergency';
 
+export type UserRole = 'patient' | 'receptionist' | 'doctor' | 'admin';
+
+export interface AuditEntry {
+  timestamp: string;
+  userRole: UserRole;
+  action: string;
+  details: string;
+}
+
 export interface PatientDetails {
   name: string;
   age: number | string;
@@ -12,23 +21,40 @@ export interface PatientDetails {
   location: string; // Village / City
 }
 
+export interface SymptomDetail {
+  name: string;
+  duration: string;
+  severity: string;
+}
+
 export interface MedicalSummary {
+  language?: string;
   chiefComplaint: string;
   symptoms: string[];
+  symptomsDetails?: SymptomDetail[];
   duration: string;
   medicines: string[];
   conditions: string[];
   allergies: string[];
+  existingConditions?: string[];
+  currentMedicines?: string[];
+  knownAllergies?: string[];
+  relevantContext?: string[];
+  normalizedComplaint?: string;
   missing: string[];
   emergency: boolean;
   emergencyReason?: string | null;
+  matchedRules?: string[];
+  emergencyPriority?: string;
+  modelUsed?: string;
+  modelBrand?: string;
 }
 
 export interface EmergencyCheckResult {
   isEmergency: boolean;
-  rulesTriggered: string[];
+  matchedRules: string[];
+  priority: 'IMMEDIATE' | 'URGENT' | 'ROUTINE';
   message: string;
-  disclaimer: string;
 }
 
 export interface PatientRecord {
@@ -42,6 +68,9 @@ export interface PatientRecord {
   status: PatientStatus;
   notes?: string;
   assignedDoctor?: string;
+  createdByRole?: UserRole;
+  updatedByRole?: UserRole;
+  auditTrail?: AuditEntry[];
 }
 
 export interface GenerateSummaryPayload {

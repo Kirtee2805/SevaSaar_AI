@@ -20,7 +20,9 @@ const SaveSummarySchema = z.object({
     emergency: z.boolean().optional(),
     emergencyReason: z.string().nullable().optional()
   }),
-  status: z.enum(['Waiting', 'Completed', 'Emergency']).optional()
+  status: z.enum(['Waiting', 'Completed', 'Emergency']).optional(),
+  notes: z.string().optional(),
+  userRole: z.enum(['patient', 'receptionist', 'doctor', 'admin']).optional().default('receptionist')
 });
 
 export async function POST(req: NextRequest) {
@@ -31,7 +33,9 @@ export async function POST(req: NextRequest) {
     const updated = updatePatientRecord(
       validatedData.patientId,
       validatedData.summary,
-      validatedData.status
+      validatedData.status,
+      validatedData.notes,
+      validatedData.userRole
     );
 
     if (!updated) {

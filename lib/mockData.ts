@@ -1,4 +1,4 @@
-import { PatientRecord, MedicalSummary } from '@/types';
+import { PatientRecord, MedicalSummary, AuditEntry, UserRole } from '@/types';
 import { checkEmergencyRules } from './emergencyRules';
 
 /**
@@ -131,20 +131,56 @@ export function addPatientRecord(record: PatientRecord): PatientRecord {
   return record;
 }
 
-export function updatePatientRecord(id: string, updatedSummary: Partial<MedicalSummary>, status?: PatientRecord['status']): PatientRecord | null {
+export function addAuditEntry(record: PatientRecord, action: string, details: string, userRole: UserRole) {
+  const entry: AuditEntry = {
+    timestamp: new Date().toISOString(),
+    userRole,
+    action,
+    details,
+  };
+
+  const updatedRecord = {
+    ...record,
+    auditTrail: [entry, ...(record.auditTrail ?? [])],
+  };
+
+  const index = mockPatientsStore.findIndex(p => p.id === record.id);
+  if (index !== -1) {
+    mockPatientsStore[index] = updatedRecord;
+  }
+
+  return updatedRecord;
+}
+
+export function updatePatientRecord(
+  id: string,
+  updatedSummary: Partial<MedicalSummary>,
+  status?: PatientRecord['status'],
+  notes?: string,
+  updatedByRole?: UserRole
+): PatientRecord | null {
   const index = mockPatientsStore.findIndex(p => p.id === id);
   if (index === -1) return null;
 
-  mockPatientsStore[index] = {
-    ...mockPatientsStore[index],
+  const existing = mockPatientsStore[index];
+  const updatedRecord: PatientRecord = {
+    ...existing,
     summary: {
-      ...mockPatientsStore[index].summary,
-      ...updatedSummary
+      ...existing.summary,
+      ...updatedSummary,
     },
-    ...(status ? { status } : {})
+    ...(status ? { status } : {}),
+    ...(notes !== undefined ? { notes } : {}),
+    ...(updatedByRole ? { updatedByRole } : {}),
   };
 
-  return mockPatientsStore[index];
+  mockPatientsStore[index] = updatedRecord;
+
+  if (updatedByRole) {
+    addAuditEntry(updatedRecord, 'Updated summary', `Status=${status ?? existing.status}; notes=${notes ?? existing.notes ?? 'unchanged'}`, updatedByRole);
+  }
+
+  return updatedRecord;
 }
 
 /**

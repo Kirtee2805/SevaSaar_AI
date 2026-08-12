@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Language } from '@/types';
+import { getSpeechRecognitionLanguage, detectPatientLanguage, normalizeSpeechTranscription, isBrowserSpeechRecognitionSupported } from '@/lib/speech/speechService';
 import { MessageSquareText, Mic, MicOff, UploadCloud, Sparkles, ArrowRight, ArrowLeft, AlertCircle, FileCheck } from 'lucide-react';
 
 interface SpeechRecognitionErrorEvent extends Event {
@@ -42,6 +43,7 @@ export function ComplaintStep({ language, rawComplaint, onChangeComplaint, onSub
   const [isSupported, setIsSupported] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const [detectedLanguage, setDetectedLanguage] = useState<Language | 'mixed'>(language);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const baseTextRef = useRef<string>('');
@@ -98,6 +100,11 @@ export function ComplaintStep({ language, rawComplaint, onChangeComplaint, onSub
       recognitionRef.current.lang = currentPrompt.bcp47;
     }
   }, [currentPrompt.bcp47]);
+
+  useEffect(() => {
+    const languageHint = detectPatientLanguage(rawComplaint);
+    setDetectedLanguage(languageHint);
+  }, [rawComplaint]);
 
   // Clean up recognition instance on unmount
   useEffect(() => {
@@ -163,7 +170,9 @@ export function ComplaintStep({ language, rawComplaint, onChangeComplaint, onSub
         }
 
         const newText = baseTextRef.current + finalTranscript + interimTranscript;
-        onChangeComplaint(newText);
+        const normalized = normalizeSpeechTranscription(newText);
+        onChangeComplaint(normalized);
+        setDetectedLanguage(detectPatientLanguage(normalized));
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -248,17 +257,26 @@ export function ComplaintStep({ language, rawComplaint, onChangeComplaint, onSub
           )}
         </div>
 
-        {/* Permission / Unsupported Error Notification */}
-        {(errorMessage || !isSupported) && (
-          <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs flex items-center gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+        {/* Detected Language & Voice Status */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {(!isSupported || errorMessage) && (
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+              <span>
+                {!isSupported
+                  ? 'Voice input is not supported in this browser. You can type your complaint in the box above.'
+                  : errorMessage}
+              </span>
+            </div>
+          )}
+
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-blue-500" />
             <span>
-              {!isSupported
-                ? 'Voice input is not supported in this browser. You can type your complaint in the box above.'
-                : errorMessage}
+              Detected Language: <strong>{detectedLanguage === 'mixed' ? 'Mixed (Hinglish / Gujlish)' : currentPrompt.langName}</strong>
             </span>
           </div>
-        )}
+        </div>
 
         {/* Input Method Options: Voice Input & Upload Reports */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

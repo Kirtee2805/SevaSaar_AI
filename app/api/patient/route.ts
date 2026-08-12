@@ -28,7 +28,8 @@ const CreatePatientSchema = z.object({
     missing: z.array(z.string()),
     emergency: z.boolean(),
     emergencyReason: z.string().nullable().optional()
-  })
+  }),
+  userRole: z.enum(['patient', 'receptionist', 'doctor', 'admin']).optional().default('patient')
 });
 
 export async function POST(req: NextRequest) {
@@ -50,7 +51,17 @@ export async function POST(req: NextRequest) {
       rawComplaint: validatedData.rawComplaint,
       summary: validatedData.summary,
       status: validatedData.summary.emergency ? 'Emergency' : 'Waiting',
-      assignedDoctor: validatedData.summary.emergency ? 'Triage Specialist / On-call Medical Officer' : 'General OPD Doctor'
+      assignedDoctor: validatedData.summary.emergency ? 'Triage Specialist / On-call Medical Officer' : 'General OPD Doctor',
+      createdByRole: validatedData.userRole,
+      updatedByRole: validatedData.userRole,
+      auditTrail: [
+        {
+          timestamp: new Date().toISOString(),
+          userRole: validatedData.userRole,
+          action: 'Create patient intake',
+          details: 'Intake record created from patient intake flow.'
+        }
+      ]
     };
 
     const savedRecord = addPatientRecord(newRecord);
