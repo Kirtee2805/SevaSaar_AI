@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SevaSaar AI • Multilingual Patient Intake & Triage Portal</title>
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/patient.css">
+  <link rel="stylesheet" href="/css/receptionist.css">
+  <link rel="stylesheet" href="/css/doctor.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩺</text></svg>">
+</head>
+<body>
+
+  <!-- Top Sticky Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      
+      <!-- Brand Logo & Tagline -->
+      <a href="#" id="brand-home" class="brand-wrapper">
+        <div class="brand-icon-box">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            <path d="M12 5v14"/>
+            <path d="M5 12h14"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>
+            <span>SevaSaar AI</span>
+            <span class="brand-badge">✨ Intake Assistant</span>
+          </h1>
+          <p class="brand-tagline">सेवासार • Multilingual Patient Intake & Triage</p>
+        </div>
+      </a>
+
+      <!-- Role Switcher & Emergency CTA -->
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <nav class="role-pills-nav" aria-label="Role Navigation">
+          <button type="button" class="role-pill-btn active" data-role="patient">
+            <span>👤</span>
+            <span>Patient</span>
+          </button>
+          <button type="button" class="role-pill-btn" data-role="receptionist">
+            <span>🛡️</span>
+            <span>Receptionist</span>
+          </button>
+          <button type="button" class="role-pill-btn" data-role="doctor">
+            <span>🩺</span>
+            <span>Doctor</span>
+          </button>
+        </nav>
+
+        <a href="tel:108" id="header-emergency-btn" class="emergency-call-btn hidden">
+          <span>📞</span>
+          <span>Emergency 108</span>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main View Container (Switched dynamically by app.js) -->
+  <main class="main-content">
+    <div class="container" id="main-view-container">
+      <!-- Injected by JavaScript -->
+    </div>
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        
+        <!-- Column 1: About -->
+        <div class="footer-brand">
+          <h4>
+            <span style="background:#2563eb; color:#fff; width:24px; height:24px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:12px;">S</span>
+            <span>SevaSaar AI (सेवासार)</span>
+          </h4>
+          <p>
+            An AI-powered multilingual patient intake assistant designed for Indian hospitals, OPD clinics, and rural Primary Healthcare Centers (PHCs). Supports Gujarati, Hindi, English, and Mixed language input.
+          </p>
+        </div>
+
+        <!-- Column 2: Clinical Disclaimer -->
+        <div class="footer-disclaimer-box">
+          <div class="footer-disclaimer-title">
+            <span>⚠️</span> CLINICAL SAFETY DISCLAIMER
+          </div>
+          <p>
+            SevaSaar AI <strong style="color:#ffffff;">DOES NOT diagnose diseases</strong>, prescribe medicines, or provide medical treatment plans. It strictly structures patient complaints and flags emergency safety indicators for human medical triage.
+          </p>
+        </div>
+
+        <!-- Column 3: Tech Note -->
+        <div class="footer-tech">
+          <h5>
+            <span>🛡️</span> Built with Gemma & LangChain Architecture
+          </h5>
+          <p>
+            Lightweight Python FastAPI backend with LangChain orchestration and Gemma AI multilingual inference. Frontend engineered in pure HTML5, CSS3, and Vanilla JavaScript.
+          </p>
+          <div style="font-size:0.75rem; color:#64748b; margin-top:0.5rem;">
+            Made with ❤️ for Indian Healthcare
+          </div>
+        </div>
+
+      </div>
+
+      <div class="footer-bottom">
+        © 2026 SevaSaar AI Healthcare Portal • Standard OPD Document Format • All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

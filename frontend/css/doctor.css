@@ -1,0 +1,344 @@
+/* ==============================================================================
+   SEVASAAR AI • DOCTOR DASHBOARD STYLES (CSS3)
+   ============================================================================== */
+
+.doctor-layout-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .doctor-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left Queue Sidebar */
+.doctor-sidebar {
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 8rem);
+  overflow: hidden;
+  position: sticky;
+  top: 6rem;
+}
+
+.sidebar-header {
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+  background: #f8fafc;
+}
+
+.sidebar-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-subtitle {
+  font-size: 0.725rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.patient-list-scroll {
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.queue-patient-item {
+  padding: 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.queue-patient-item:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.queue-patient-item.selected {
+  border-color: var(--primary-indigo);
+  background: #eef2ff;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.15);
+}
+
+.queue-patient-item.is-emergency {
+  border-left: 4px solid var(--accent-red);
+  background: #fff5f5;
+}
+
+.queue-patient-item.is-emergency.selected {
+  background: #fee2e2;
+  border-color: var(--accent-red);
+}
+
+.item-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.item-token {
+  font-weight: 800;
+  font-size: 0.775rem;
+  color: var(--primary-indigo);
+}
+
+.item-name {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-meta {
+  font-size: 0.725rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+/* Right Clinical Inspection Console */
+.doctor-console {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.patient-profile-header-card {
+  background: #ffffff;
+  padding: 1.5rem 1.75rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.profile-demographics {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.profile-avatar-box {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--radius-lg);
+  background: #e0e7ff;
+  color: var(--primary-indigo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.profile-name {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+.profile-sub-details {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.console-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-doctor-action {
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 800;
+  border: 1px solid var(--border-light);
+  background: #ffffff;
+  color: var(--text-main);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-doctor-action:hover {
+  background: #f1f5f9;
+}
+
+.btn-mark-completed {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+}
+
+.btn-mark-completed:hover {
+  background: #059669;
+}
+
+/* Original Complaint Box */
+.raw-complaint-box {
+  background: #f8fafc;
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid #cbd5e1;
+}
+
+.raw-complaint-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4rem;
+}
+
+.raw-complaint-text {
+  font-style: italic;
+  font-size: 0.85rem;
+  color: #334155;
+  line-height: 1.5;
+}
+
+/* Clinical Sections Grid */
+.clinical-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.clinical-card {
+  background: #ffffff;
+  padding: 1.25rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.clinical-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.clinical-card-title {
+  font-size: 0.775rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.clinical-card-content {
+  font-size: 0.85rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.symptoms-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.symptom-tag {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #bfdbfe;
+}
+
+/* Consultation & Prescription Section */
+.consultation-notes-box {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.consultation-notes-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-main);
+  letter-spacing: 0.04em;
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.consultation-textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+}
+
+.consultation-textarea:focus {
+  border-color: var(--primary-indigo);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.doctor-footer-note {
+  font-size: 0.725rem;
+  color: var(--text-light);
+  text-align: center;
+  border-top: 1px solid var(--border-light);
+  padding-top: 0.85rem;
+}
